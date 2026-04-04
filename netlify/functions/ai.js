@@ -30,7 +30,9 @@ Your tone must be:
 Return response as valid JSON with EXACTLY these keys:
 "food_suggestions" (list of 5)
 "exercise_suggestions" (list of 4)
-"health_tips" (list of 4)
+"health_tips" (list of 3)
+"sleep_advice" (list of 3)
+"stress_advice" (list of 3)
 "mood_analysis" (2 sentences)
 `;
 
@@ -39,8 +41,8 @@ User health data:
 Phase: ${period_phase}
 Mood: ${mood}
 Pain: ${pain_level}/10
-Energy: ${energy_level}
-Sleep: ${sleep_quality}
+Energy: ${energy_level ?? "not specified"}
+Sleep: ${sleep_quality ?? "not specified"}
 
 Return JSON only.
 `;
@@ -84,6 +86,8 @@ Return JSON only.
           food_suggestions: parsedContent.food_suggestions || [],
           exercise_suggestions: parsedContent.exercise_suggestions || [],
           health_tips: parsedContent.health_tips || [],
+          sleep_advice: parsedContent.sleep_advice || [],
+          stress_advice: parsedContent.stress_advice || [],
           mood_analysis: parsedContent.mood_analysis || "",
           phase: period_phase
         }

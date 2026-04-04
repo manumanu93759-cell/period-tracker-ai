@@ -2,809 +2,202 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🌸 AI Smart Period Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --rose:#E8667A; --rose-lt:#F2A3B0; --blush:#FDE8EC; --peach:#FFDDD2;
-    --lilac:#D4C5F9; --mint:#C5EFE0; --sky:#C5DFF9; --cream:#FFF8F5;
-    --warm:#3D2327; --mid:#7B4F55; --soft:#B08B90; --white:#FFFFFF;
-    --card-bg:rgba(255,255,255,0.55); --shadow:0 4px 32px rgba(232,102,122,0.10);
-    --radius:20px; --radius-sm:12px;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{font-family:'DM Sans',sans-serif;background:transparent;color:var(--warm);min-height:100vh;}
-  #webgl-canvas {position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;}
-
-  /* Top bar */
-  .top-bar{background:rgba(255,255,255,0.45);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid rgba(232,102,122,0.18);
-    position:sticky;top:0;z-index:100;padding:14px 20px;display:flex;align-items:center;gap:10px;}
-  .top-bar .logo{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--rose);flex:1;}
-  .top-bar .logo span{color:var(--warm);font-weight:400;font-size:0.78rem;display:block;}
-  .api-status{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--soft);
-    background:var(--blush);border-radius:20px;padding:4px 10px;cursor:pointer;}
-  .api-status.ok{color:#27ae60;background:#e8f8ee;}
-  .api-status.err{color:#e74c3c;background:#fdf0f0;}
-  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
-
-  /* Bottom nav */
-  .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.55);
-    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(232,102,122,0.18);
-    display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));}
-  .nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;
-    cursor:pointer;padding:6px 12px;border-radius:12px;transition:all 0.2s;color:var(--soft);
-    font-family:'DM Sans',sans-serif;font-size:0.68rem;font-weight:500;}
-  .nav-btn .icon{font-size:1.25rem;transition:transform 0.2s;}
-  .nav-btn.active{color:var(--rose);}
-  .nav-btn.active .icon{transform:scale(1.15);}
-
-  /* Pages */
-  .page{display:none;padding:20px 16px 110px;max-width:480px;margin:0 auto;}
-  .page.active{display:block;animation:fadeUp 0.3s ease;}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-  .section-title{font-family:'Playfair Display',serif;font-size:1.55rem;font-weight:700;color:var(--warm);margin-bottom:4px;}
-  .section-sub{color:var(--soft);font-size:0.85rem;margin-bottom:20px;}
-
-  /* Cards */
-  .card{background:var(--card-bg);border:1px solid rgba(232,102,122,0.18);border-radius:var(--radius);
-    padding:20px;box-shadow:var(--shadow);margin-bottom:16px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}
-  .card-title{font-weight:600;font-size:0.85rem;color:var(--mid);text-transform:uppercase;
-    letter-spacing:0.06em;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
-
-  /* Hero */
-  .hero-card{background:linear-gradient(135deg,#E8667A 0%,#c94b6a 100%);color:white;
-    border-radius:24px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden;
-    box-shadow:0 8px 32px rgba(232,102,122,0.35);}
-  .hero-card::after{content:'🌸';font-size:7rem;position:absolute;right:-10px;top:-10px;opacity:0.15;}
-  .hero-card .label{font-size:0.75rem;opacity:0.85;text-transform:uppercase;letter-spacing:0.08em;}
-  .hero-card .big-date{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;margin:4px 0;}
-  .hero-card .sub{font-size:0.82rem;opacity:0.85;}
-  .hero-card .phase-badge{display:inline-block;margin-top:14px;background:rgba(255,255,255,0.22);
-    border:1px solid rgba(255,255,255,0.35);border-radius:20px;padding:4px 14px;font-size:0.78rem;font-weight:500;}
-
-  /* Stats */
-  .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
-  .stat-pill{background:var(--card-bg);border:1px solid rgba(232,102,122,0.12);border-radius:var(--radius-sm);
-    padding:16px;text-align:center;box-shadow:var(--shadow);}
-  .stat-pill .s-num{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:var(--rose);}
-  .stat-pill .s-label{font-size:0.72rem;color:var(--soft);margin-top:2px;}
-
-  /* Phase banner */
-  .phase-banner{border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;
-    display:flex;align-items:center;gap:14px;}
-  .phase-banner.menstrual{background:linear-gradient(120deg,#fde8ec,#ffd6de);}
-  .phase-banner.follicular{background:linear-gradient(120deg,#c5efe0,#d4f5ea);}
-  .phase-banner.ovulation{background:linear-gradient(120deg,#c5dff9,#d4ecff);}
-  .phase-banner.luteal{background:linear-gradient(120deg,#d4c5f9,#e4d8ff);}
-  .phase-banner .phase-icon{font-size:2.2rem;}
-  .phase-banner .phase-text .pt{font-weight:600;font-size:0.95rem;color:var(--warm);}
-  .phase-banner .phase-text .ps{font-size:0.78rem;color:var(--mid);margin-top:2px;}
-
-  /* Forms */
-  .form-group{margin-bottom:16px;}
-  .form-label{display:block;font-size:0.83rem;font-weight:500;color:var(--mid);margin-bottom:6px;}
-  .form-input{width:100%;padding:12px 16px;background:rgba(255,255,255,0.9);
-    border:1.5px solid rgba(232,102,122,0.2);border-radius:var(--radius-sm);
-    font-family:'DM Sans',sans-serif;font-size:0.93rem;color:var(--warm);outline:none;
-    transition:border-color 0.2s,box-shadow 0.2s;}
-  .form-input:focus{border-color:var(--rose);box-shadow:0 0 0 3px rgba(232,102,122,0.12);}
-  select.form-input{cursor:pointer;}
-
-  /* Chips */
-  .chips{display:flex;flex-wrap:wrap;gap:8px;}
-  .chip{padding:8px 16px;border-radius:30px;cursor:pointer;border:1.5px solid rgba(232,102,122,0.2);
-    background:white;font-size:0.83rem;color:var(--mid);transition:all 0.2s;font-family:'DM Sans',sans-serif;}
-  .chip.selected{background:var(--rose);color:white;border-color:var(--rose);}
-
-  /* Mood grid */
-  .mood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-  .mood-btn{display:flex;flex-direction:column;align-items:center;gap:4px;background:white;
-    border:1.5px solid rgba(232,102,122,0.15);border-radius:14px;padding:10px 4px;cursor:pointer;
-    transition:all 0.2s;font-size:0.7rem;font-weight:500;color:var(--mid);}
-  .mood-btn .mood-emoji{font-size:1.7rem;}
-  .mood-btn.selected{background:var(--blush);border-color:var(--rose);color:var(--rose);}
-
-  /* Slider */
-  .slider-wrap{display:flex;align-items:center;gap:10px;}
-  .pain-slider{flex:1;-webkit-appearance:none;height:6px;
-    background:linear-gradient(to right,#E8667A 0%,#E8667A var(--val,50%),#fde8ec var(--val,50%),#fde8ec 100%);
-    border-radius:10px;outline:none;cursor:pointer;}
-  .pain-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
-    background:var(--rose);cursor:pointer;box-shadow:0 2px 8px rgba(232,102,122,0.4);}
-  .slider-val{min-width:36px;height:36px;border-radius:50%;background:var(--rose);color:white;
-    font-weight:600;font-size:0.88rem;display:flex;align-items:center;justify-content:center;}
-
-  /* Buttons */
-  .btn{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);
-    font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.2s ease;}
-  .btn-primary{background:linear-gradient(135deg,#E8667A,#c94b6a);color:white;
-    box-shadow:0 4px 16px rgba(232,102,122,0.35);}
-  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(232,102,122,0.45);}
-  .btn-primary:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
-  .btn-secondary{background:var(--blush);color:var(--rose);border:1.5px solid rgba(232,102,122,0.2);}
-
-  /* ── AI Panel ── */
-  .ai-form-card{background:linear-gradient(135deg,rgba(255,255,255,0.95),rgba(253,232,236,0.7));
-    border:1.5px solid rgba(232,102,122,0.18);border-radius:var(--radius);padding:20px;
-    box-shadow:var(--shadow);margin-bottom:16px;}
-
-  .ai-loading{text-align:center;padding:36px 20px;}
-  .ai-loading .sparkle{font-size:2.5rem;animation:pulse 1.2s ease-in-out infinite;}
-  @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:0.7}}
-  .ai-loading p{color:var(--mid);font-size:0.88rem;margin-top:12px;}
-
-  .ai-result-section{margin-bottom:18px;}
-  .ai-result-section .ars-title{font-weight:600;font-size:0.82rem;text-transform:uppercase;
-    letter-spacing:0.06em;color:var(--mid);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-  .ai-item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;
-    border-bottom:1px solid rgba(232,102,122,0.08);}
-  .ai-item:last-child{border-bottom:none;}
-  .ai-bullet{width:20px;height:20px;border-radius:50%;background:var(--blush);color:var(--rose);
-    font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
-  .ai-item-text{font-size:0.87rem;color:var(--warm);line-height:1.45;}
-
-  .mood-analysis-box{background:linear-gradient(120deg,#fde8ec,#f9d4dc);border-radius:var(--radius-sm);
-    padding:14px 16px;border:1px solid rgba(232,102,122,0.15);}
-  .mood-analysis-box p{font-size:0.88rem;color:var(--warm);line-height:1.55;font-style:italic;}
-
-  .tip-box{background:linear-gradient(120deg,#fff8f0,#fde8ec);border:1px solid rgba(232,102,122,0.15);
-    border-radius:var(--radius-sm);padding:14px 16px;margin-top:12px;display:flex;gap:10px;align-items:flex-start;}
-  .tip-box .tip-icon{font-size:1.1rem;flex-shrink:0;}
-  .tip-box .tip-text{font-size:0.82rem;color:var(--mid);line-height:1.5;}
-
-  .error-box{background:#fff0f0;border:1.5px solid #fac5c5;border-radius:var(--radius-sm);
-    padding:16px;margin-top:12px;text-align:center;}
-  .error-box .err-icon{font-size:1.8rem;margin-bottom:8px;}
-  .error-box p{font-size:0.85rem;color:#c94b6a;}
-  .error-box code{font-size:0.75rem;background:#fde8ec;padding:2px 6px;border-radius:4px;}
-
-  /* History */
-  .history-item{display:flex;justify-content:space-between;align-items:center;
-    padding:12px 0;border-bottom:1px solid rgba(232,102,122,0.08);}
-  .history-item:last-child{border-bottom:none;}
-  .h-date{font-weight:600;font-size:0.88rem;}
-  .h-days{font-size:0.78rem;color:var(--soft);}
-  .h-len{background:var(--blush);color:var(--rose);border-radius:20px;padding:3px 10px;font-size:0.76rem;font-weight:600;}
-
-  /* Mini graph */
-  .mini-graph{height:72px;display:flex;align-items:flex-end;gap:4px;padding:4px 0 0;}
-  .graph-bar{flex:1;border-radius:4px 4px 0 0;min-height:4px;transition:height 0.5s ease;}
-  .graph-labels{display:flex;justify-content:space-between;margin-top:4px;}
-  .graph-label{font-size:0.63rem;color:var(--soft);}
-
-  /* Toast */
-  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
-    background:var(--warm);color:white;padding:11px 22px;border-radius:30px;font-size:0.85rem;
-    font-weight:500;opacity:0;transition:all 0.3s ease;z-index:999;white-space:nowrap;
-    box-shadow:0 4px 20px rgba(0,0,0,0.2);}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-  .empty-state{text-align:center;padding:40px 20px;}
-  .empty-state .e-icon{font-size:2.8rem;margin-bottom:12px;}
-  .empty-state .e-title{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--warm);margin-bottom:8px;}
-  .empty-state .e-sub{font-size:0.83rem;color:var(--soft);}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Flow AI — privacy-first women's health tracking with cycle predictions and an AI coach.">
+<title>Flow AI — Women's Health Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="webgl-canvas"></canvas>
+<canvas id="webgl-canvas" aria-hidden="true"></canvas>
 
-<!-- Top Bar -->
-<div class="top-bar">
-  <div class="logo">🌸 Flow
-    <span>AI Smart Period Tracker</span>
-  </div>
-  <div class="api-status" id="api-status" onclick="checkAPIStatus()" title="Click to refresh status">
-    <div class="dot"></div><span id="api-status-text">checking…</span>
-  </div>
-</div>
-
-<!-- Pages -->
-<div id="page-home" class="page active">
-  <p class="section-title">Hello 👋</p>
-  <p class="section-sub">Your cycle at a glance</p>
-  <div id="home-content"></div>
-</div>
-
-<div id="page-track" class="page">
-  <p class="section-title">Log Period</p>
-  <p class="section-sub">Record dates & daily symptoms</p>
-
-  <div class="card">
-    <div class="card-title">📅 Period Dates</div>
-    <div class="form-group">
-      <label class="form-label">First day of period</label>
-      <input type="date" id="start-date" class="form-input">
+<header class="top-bar">
+  <div class="top-bar-inner">
+    <div class="logo">
+      <span class="logo-mark" data-i18n="appTitle">Flow AI</span>
+      <span class="logo-sub" data-i18n="appTagline">Women's Health Platform</span>
     </div>
-    <div class="form-group">
-      <label class="form-label">Last day of period</label>
-      <input type="date" id="end-date" class="form-input">
-    </div>
-    <button class="btn btn-primary" onclick="savePeriod()">Save Period 🌸</button>
-  </div>
-
-  <div class="card">
-    <div class="card-title">💗 Daily Health Check-In</div>
-    <div class="form-group">
-      <label class="form-label">Mood today?</label>
-      <div class="mood-grid">
-        <button class="mood-btn" data-mood="Happy"    onclick="selectMood(this)"><span class="mood-emoji">😊</span>Happy</button>
-        <button class="mood-btn" data-mood="Sad"      onclick="selectMood(this)"><span class="mood-emoji">😢</span>Sad</button>
-        <button class="mood-btn" data-mood="Irritated"onclick="selectMood(this)"><span class="mood-emoji">😤</span>Irritated</button>
-        <button class="mood-btn" data-mood="Tired"    onclick="selectMood(this)"><span class="mood-emoji">😴</span>Tired</button>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Pain level: <span id="pain-val-label">5</span>/10</label>
-      <div class="slider-wrap">
-        <input type="range" min="1" max="10" value="5" class="pain-slider" id="pain-slider" oninput="updateSlider(this)">
-        <div class="slider-val" id="pain-display">5</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Flow level</label>
-      <div class="chips" id="flow-chips">
-        <div class="chip" data-val="Light"  onclick="selectChip(this,'flow-chips')">💧 Light</div>
-        <div class="chip" data-val="Medium" onclick="selectChip(this,'flow-chips')">💧💧 Medium</div>
-        <div class="chip" data-val="Heavy"  onclick="selectChip(this,'flow-chips')">💧💧💧 Heavy</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Sleep quality</label>
-      <div class="chips" id="sleep-chips">
-        <div class="chip" data-val="Poor"  onclick="selectChip(this,'sleep-chips')">😣 Poor</div>
-        <div class="chip" data-val="Okay"  onclick="selectChip(this,'sleep-chips')">😐 Okay</div>
-        <div class="chip" data-val="Good"  onclick="selectChip(this,'sleep-chips')">😌 Good</div>
-        <div class="chip" data-val="Great" onclick="selectChip(this,'sleep-chips')">🌟 Great</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Energy level</label>
-      <div class="chips" id="energy-chips">
-        <div class="chip" data-val="Low"    onclick="selectChip(this,'energy-chips')">🪫 Low</div>
-        <div class="chip" data-val="Medium" onclick="selectChip(this,'energy-chips')">⚡ Medium</div>
-        <div class="chip" data-val="High"   onclick="selectChip(this,'energy-chips')">🔋 High</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Cramps?</label>
-      <div class="chips" id="cramp-chips">
-        <div class="chip" data-val="yes" onclick="selectChip(this,'cramp-chips')">Yes 😣</div>
-        <div class="chip" data-val="no"  onclick="selectChip(this,'cramp-chips')">No 😊</div>
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="saveDailyLog()">Save Check-In ✨</button>
-  </div>
-</div>
-
-<!-- ── AI Page ── -->
-<div id="page-ai" class="page">
-  <p class="section-title">AI Advisor ✨</p>
-  <p class="section-sub">Personalised suggestions just for you</p>
-
-  <div class="ai-form-card">
-    <div class="card-title">🧠 Tell me how you feel</div>
-
-    <div class="form-group">
-      <label class="form-label">Current phase</label>
-      <select id="ai-phase" class="form-input">
-        <option value="menstrual">🩸 During Period</option>
-        <option value="follicular">🌱 After Period</option>
-        <option value="ovulation">✨ Ovulation</option>
-        <option value="luteal">🌙 Before Period (PMS)</option>
+    <div class="top-actions">
+      <label class="visually-hidden" for="lang-select">Language</label>
+      <select id="lang-select" class="lang-select" aria-label="Language">
+        <option value="en" data-i18n="lang_en">English</option>
+        <option value="hi" data-i18n="lang_hi">हिंदी</option>
+        <option value="kn" data-i18n="lang_kn">ಕನ್ನಡ</option>
       </select>
     </div>
+  </div>
+</header>
 
+<!-- Dashboard -->
+<section id="page-dashboard" class="page active" aria-label="Dashboard">
+  <h1 class="section-title" data-i18n="dash_greeting">Hello</h1>
+  <p class="section-sub" data-i18n="dash_sub">Your cycle at a glance</p>
+  <div id="dashboard-content"></div>
+</section>
+
+<!-- Predictions -->
+<section id="page-predictions" class="page" aria-label="Predictions">
+  <h1 class="section-title" data-i18n="predictions_title">Cycle intelligence</h1>
+  <p class="section-sub" data-i18n="predictions_sub">Forecasts from your history</p>
+  <div id="predictions-content"></div>
+</section>
+
+<!-- Log -->
+<section id="page-log" class="page" aria-label="Log">
+  <h1 class="section-title" data-i18n="section_log_title">Log & check-in</h1>
+  <p class="section-sub" data-i18n="section_log_sub">Period dates and daily symptoms</p>
+
+  <div class="card glass-card">
+    <h2 class="card-title" data-i18n="period_dates">Period dates</h2>
     <div class="form-group">
-      <label class="form-label">Mood</label>
-      <div class="mood-grid" id="ai-mood-grid">
-        <button class="mood-btn" data-mood="Happy"    onclick="selectAIMood(this)"><span class="mood-emoji">😊</span>Happy</button>
-        <button class="mood-btn" data-mood="Sad"      onclick="selectAIMood(this)"><span class="mood-emoji">😢</span>Sad</button>
-        <button class="mood-btn" data-mood="Irritated"onclick="selectAIMood(this)"><span class="mood-emoji">😤</span>Irritated</button>
-        <button class="mood-btn" data-mood="Tired"    onclick="selectAIMood(this)"><span class="mood-emoji">😴</span>Tired</button>
+      <label class="form-label" for="start-date" data-i18n="first_day">First day of period</label>
+      <input type="date" id="start-date" class="form-input" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="end-date" data-i18n="last_day">Last day of period</label>
+      <input type="date" id="end-date" class="form-input" autocomplete="off">
+    </div>
+    <button type="button" class="btn btn-primary" id="btn-save-period" data-i18n="save_period">Save period</button>
+  </div>
+
+  <div class="card glass-card">
+    <h2 class="card-title" data-i18n="daily_checkin">Daily health check-in</h2>
+    <div class="form-group">
+      <span class="form-label" data-i18n="mood_today">Mood today</span>
+      <div class="mood-grid" id="log-mood-grid">
+        <button type="button" class="mood-btn" data-mood="Happy"><span class="mood-emoji">😊</span><span data-i18n="mood_happy">Happy</span></button>
+        <button type="button" class="mood-btn" data-mood="Sad"><span class="mood-emoji">😢</span><span data-i18n="mood_sad">Sad</span></button>
+        <button type="button" class="mood-btn" data-mood="Irritated"><span class="mood-emoji">😤</span><span data-i18n="mood_irritated">Irritated</span></button>
+        <button type="button" class="mood-btn" data-mood="Tired"><span class="mood-emoji">😴</span><span data-i18n="mood_tired">Tired</span></button>
       </div>
     </div>
-
     <div class="form-group">
-      <label class="form-label">Pain level: <span id="ai-pain-label">5</span>/10</label>
+      <label class="form-label"><span data-i18n="pain_level">Pain level</span>: <span id="pain-val-label">5</span>/10</label>
       <div class="slider-wrap">
-        <input type="range" min="1" max="10" value="5" class="pain-slider" id="ai-pain-slider"
-          oninput="updateAISlider(this)">
+        <input type="range" min="1" max="10" value="5" class="pain-slider" id="pain-slider" aria-valuemin="1" aria-valuemax="10">
+        <div class="slider-val" id="pain-display" aria-hidden="true">5</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label"><span data-i18n="energy_level">Energy level</span>: <span id="energy-val-label">5</span>/10</label>
+      <div class="slider-wrap">
+        <input type="range" min="1" max="10" value="5" class="pain-slider energy-slider" id="energy-slider" aria-valuemin="1" aria-valuemax="10">
+        <div class="slider-val energy-val" id="energy-display">5</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label" data-i18n="flow_level">Flow level</span>
+      <div class="chips" id="flow-chips">
+        <button type="button" class="chip" data-val="Light"><span data-i18n="chip_light">Light</span></button>
+        <button type="button" class="chip" data-val="Medium"><span data-i18n="chip_medium">Medium</span></button>
+        <button type="button" class="chip" data-val="Heavy"><span data-i18n="chip_heavy">Heavy</span></button>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label" data-i18n="sleep_quality">Sleep quality</span>
+      <div class="chips" id="sleep-chips">
+        <button type="button" class="chip" data-val="Poor"><span data-i18n="sleep_poor">Poor</span></button>
+        <button type="button" class="chip" data-val="Okay"><span data-i18n="sleep_okay">Okay</span></button>
+        <button type="button" class="chip" data-val="Good"><span data-i18n="sleep_good">Good</span></button>
+        <button type="button" class="chip" data-val="Great"><span data-i18n="sleep_great">Great</span></button>
+      </div>
+    </div>
+    <button type="button" class="btn btn-primary" id="btn-save-checkin" data-i18n="save_checkin">Save check-in</button>
+  </div>
+</section>
+
+<!-- AI Coach -->
+<section id="page-ai" class="page" aria-label="AI Coach">
+  <h1 class="section-title" data-i18n="ai_page_title">AI personal coach</h1>
+  <p class="section-sub" data-i18n="ai_page_sub">Chat + smart recommendations</p>
+
+  <div class="card glass-card chat-card-wrap">
+    <div class="card-title-row">
+      <h2 class="card-title" data-i18n="ask_flow">Ask Flow AI</h2>
+      <button type="button" class="btn-text" id="btn-clear-chat" aria-label="Clear chat">✕</button>
+    </div>
+    <div class="chat-container" id="chat-messages" role="log" aria-live="polite"></div>
+    <div class="chat-input-wrapper">
+      <input type="text" id="chat-input" autocomplete="off" data-i18n-placeholder="chat_placeholder" placeholder="Ask anything…">
+      <button type="button" id="btn-send-chat" aria-label="Send">➤</button>
+    </div>
+  </div>
+
+  <div class="card glass-card gradient-edge">
+    <h2 class="card-title" data-i18n="deep_report">Smart recommendations</h2>
+    <p class="card-hint" data-i18n="deep_report_sub">Tips for your phase</p>
+    <div class="form-group">
+      <label class="form-label" for="ai-phase" data-i18n="current_phase">Cycle phase</label>
+      <select id="ai-phase" class="form-input">
+        <option value="menstrual" data-i18n="phase_menstrual">Menstrual</option>
+        <option value="follicular" data-i18n="phase_follicular">Follicular</option>
+        <option value="ovulation" data-i18n="phase_ovulation">Ovulation</option>
+        <option value="luteal" data-i18n="phase_luteal">Luteal</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <span class="form-label" data-i18n="mood_today">Mood</span>
+      <div class="mood-grid" id="ai-mood-grid">
+        <button type="button" class="mood-btn" data-mood="Happy"><span class="mood-emoji">😊</span><span data-i18n="mood_happy">Happy</span></button>
+        <button type="button" class="mood-btn" data-mood="Sad"><span class="mood-emoji">😢</span><span data-i18n="mood_sad">Sad</span></button>
+        <button type="button" class="mood-btn" data-mood="Irritated"><span class="mood-emoji">😤</span><span data-i18n="mood_irritated">Irritated</span></button>
+        <button type="button" class="mood-btn" data-mood="Tired"><span class="mood-emoji">😴</span><span data-i18n="mood_tired">Tired</span></button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label"><span data-i18n="pain_level">Pain</span>: <span id="ai-pain-label">5</span>/10</label>
+      <div class="slider-wrap">
+        <input type="range" min="1" max="10" value="5" class="pain-slider" id="ai-pain-slider">
         <div class="slider-val" id="ai-pain-display">5</div>
       </div>
     </div>
-
     <div class="form-group">
-      <label class="form-label">Energy level</label>
-      <div class="chips" id="ai-energy-chips">
-        <div class="chip" data-val="Low"    onclick="selectChip(this,'ai-energy-chips')">🪫 Low</div>
-        <div class="chip" data-val="Medium" onclick="selectChip(this,'ai-energy-chips')">⚡ Medium</div>
-        <div class="chip" data-val="High"   onclick="selectChip(this,'ai-energy-chips')">🔋 High</div>
+      <label class="form-label"><span data-i18n="energy_level">Energy</span>: <span id="ai-energy-label">5</span>/10</label>
+      <div class="slider-wrap">
+        <input type="range" min="1" max="10" value="5" class="pain-slider energy-slider" id="ai-energy-slider">
+        <div class="slider-val energy-val" id="ai-energy-display">5</div>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="form-label">Sleep quality</label>
-      <div class="chips" id="ai-sleep-chips">
-        <div class="chip" data-val="Poor"  onclick="selectChip(this,'ai-sleep-chips')">😣 Poor</div>
-        <div class="chip" data-val="Okay"  onclick="selectChip(this,'ai-sleep-chips')">😐 Okay</div>
-        <div class="chip" data-val="Good"  onclick="selectChip(this,'ai-sleep-chips')">😌 Good</div>
-        <div class="chip" data-val="Great" onclick="selectChip(this,'ai-sleep-chips')">🌟 Great</div>
-      </div>
-    </div>
-
-    <button class="btn btn-primary" id="ai-submit-btn" onclick="getAISuggestions()">
-      ✨ Get AI Suggestions
-    </button>
+    <button type="button" class="btn btn-primary" id="ai-submit-btn" data-i18n="generate_report">Generate recommendations</button>
   </div>
-
   <div id="ai-result"></div>
-</div>
+</section>
 
-<div id="page-history" class="page">
-  <p class="section-title">History</p>
-  <p class="section-sub">Your cycle records</p>
+<!-- Analytics -->
+<section id="page-analytics" class="page" aria-label="Analytics">
+  <h1 class="section-title" data-i18n="analytics_title">Your cycle analytics</h1>
+  <p class="section-sub" data-i18n="analytics_sub">Trends from your logs</p>
+  <div id="analytics-content"></div>
+</section>
+
+<!-- History -->
+<section id="page-history" class="page" aria-label="History">
+  <h1 class="section-title" data-i18n="history_title">History</h1>
+  <p class="section-sub" data-i18n="history_sub">Periods and check-ins</p>
   <div id="history-content"></div>
-</div>
+</section>
 
-<!-- Bottom Nav -->
-<nav class="bottom-nav">
-  <button class="nav-btn active" onclick="navigate('home',this)"><span class="icon">🏠</span>Home</button>
-  <button class="nav-btn"        onclick="navigate('track',this)"><span class="icon">📝</span>Log</button>
-  <button class="nav-btn"        onclick="navigate('ai',this)"><span class="icon">✨</span>AI</button>
-  <button class="nav-btn"        onclick="navigate('history',this)"><span class="icon">📊</span>History</button>
+<nav class="bottom-nav" aria-label="Primary">
+  <button type="button" class="nav-btn active" data-page="dashboard"><span class="icon" aria-hidden="true">🏠</span><span data-i18n="nav_home">Home</span></button>
+  <button type="button" class="nav-btn" data-page="predictions"><span class="icon" aria-hidden="true">🔮</span><span data-i18n="nav_predictions">Predict</span></button>
+  <button type="button" class="nav-btn" data-page="log"><span class="icon" aria-hidden="true">📝</span><span data-i18n="nav_log">Log</span></button>
+  <button type="button" class="nav-btn" data-page="ai"><span class="icon" aria-hidden="true">✨</span><span data-i18n="nav_ai">Coach</span></button>
+  <button type="button" class="nav-btn" data-page="analytics"><span class="icon" aria-hidden="true">📊</span><span data-i18n="nav_analytics">Charts</span></button>
+  <button type="button" class="nav-btn" data-page="history"><span class="icon" aria-hidden="true">🗓️</span><span data-i18n="nav_history">History</span></button>
 </nav>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
-<script>
-/* ═══════════════════════════════════════════════════════
-   CONFIG — your FastAPI backend URL
-   ═══════════════════════════════════════════════════════ */
-const API_BASE = '';
-
-/* ── Local storage ── */
-const LS_KEY = 'flow_tracker_v2';
-let localData = JSON.parse(localStorage.getItem(LS_KEY) || '{"periods":[],"daily_logs":[]}');
-const saveLocal = () => localStorage.setItem(LS_KEY, JSON.stringify(localData));
-
-/* ── Phase config ── */
-const PHASE_CFG = {
-  menstrual:  {label:'During Period',  icon:'🩸', color:'menstrual',  tip:'Be gentle with yourself today 💗'},
-  follicular: {label:'After Period',   icon:'🌱', color:'follicular', tip:'Energy is returning — you\'ve got this!'},
-  ovulation:  {label:'Ovulation',      icon:'✨', color:'ovulation',  tip:'Peak confidence & energy!'},
-  luteal:     {label:'Before Period',  icon:'🌙', color:'luteal',     tip:'Extra self-care mode on 🌸'},
-  unknown:    {label:'Log a period',   icon:'🌸', color:'follicular', tip:'Add your first period to get started!'},
-};
-
-/* ── Navigation ── */
-function navigate(page, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  btn.classList.add('active');
-  if (page === 'home')    renderHome();
-  if (page === 'history') renderHistory();
-  if (page === 'ai')      prefillAIForm();
-}
-
-/* ── Cycle helpers ── */
-function getAvgCycle() {
-  const p = localData.periods;
-  if (p.length < 2) return 28;
-  const s = [...p].sort((a,b) => a.start_date < b.start_date ? -1 : 1);
-  const lens = [];
-  for (let i = 1; i < s.length; i++) {
-    lens.push(Math.floor((new Date(s[i].start_date) - new Date(s[i-1].start_date)) / 864e5));
-  }
-  return Math.round(lens.reduce((a,b) => a+b, 0) / lens.length);
-}
-
-function getPhase() {
-  const p = localData.periods;
-  if (!p.length) return 'unknown';
-  const sorted = [...p].sort((a,b) => a.start_date > b.start_date ? -1 : 1);
-  const last   = sorted[0];
-  const start  = new Date(last.start_date);
-  const end    = last.end_date ? new Date(last.end_date) : new Date(start.getTime() + 5*864e5);
-  const today  = new Date(); today.setHours(0,0,0,0);
-  const days   = Math.floor((today - start) / 864e5);
-  const avg    = getAvgCycle();
-  if (today >= start && today <= end) return 'menstrual';
-  if (days < 7)                       return 'follicular';
-  if (days >= 12 && days <= 16)       return 'ovulation';
-  if (days >= avg - 7)                return 'luteal';
-  return 'follicular';
-}
-
-function getNextPeriod() {
-  const p = localData.periods;
-  if (!p.length) return null;
-  const sorted = [...p].sort((a,b) => a.start_date < b.start_date ? -1 : 1);
-  const last   = new Date(sorted[sorted.length-1].start_date);
-  return new Date(last.getTime() + getAvgCycle() * 864e5);
-}
-
-/* ── Home ── */
-function renderHome() {
-  const phase = getPhase();
-  const cfg   = PHASE_CFG[phase] || PHASE_CFG.unknown;
-  const next  = getNextPeriod();
-  const avg   = getAvgCycle();
-  const today = new Date();
-  let daysUntil = null, nextStr = '—';
-  if (next) {
-    daysUntil = Math.ceil((next - today) / 864e5);
-    nextStr   = next.toLocaleDateString('en-US', {month:'long', day:'numeric'});
-  }
-  const heroSub = daysUntil !== null
-    ? (daysUntil > 0 ? `${daysUntil} days away` : daysUntil === 0 ? 'Today!' : `${Math.abs(daysUntil)} days overdue`)
-    : 'Log a period to predict';
-
-  const logs     = (localData.daily_logs || []).slice(-7);
-  const moodMap  = {Happy:4, Sad:2, Tired:2, Irritated:3};
-  const moodBars = logs.map(l => {
-    const h = ((moodMap[l.mood] || 2)/4)*100;
-    return `<div class="graph-bar" style="height:${h}%;background:var(--rose-lt);"></div>`;
-  }).join('') || '<div style="color:var(--soft);font-size:0.78rem;width:100%;text-align:center">Log moods to see graph</div>';
-
-  document.getElementById('home-content').innerHTML = `
-    <div class="hero-card">
-      <div class="label">Next Period</div>
-      <div class="big-date">${nextStr}</div>
-      <div class="sub">${heroSub}</div>
-      <div class="phase-badge">${cfg.icon} ${cfg.label}</div>
-    </div>
-    <div class="phase-banner ${cfg.color}">
-      <div class="phase-icon">${cfg.icon}</div>
-      <div class="phase-text">
-        <div class="pt">Current Phase: ${cfg.label}</div>
-        <div class="ps">${cfg.tip}</div>
-      </div>
-    </div>
-    <div class="stats-row">
-      <div class="stat-pill"><div class="s-num">${avg}</div><div class="s-label">Avg Cycle (days)</div></div>
-      <div class="stat-pill"><div class="s-num">${localData.periods.length}</div><div class="s-label">Periods Logged</div></div>
-    </div>
-    <div class="card">
-      <div class="card-title">😊 Mood — Last 7 Days</div>
-      <div class="mini-graph">${moodBars}</div>
-      ${logs.length ? `<div class="graph-labels">${logs.map(l => `<span class="graph-label">${new Date(l.date).toLocaleDateString('en',{weekday:'narrow'})}</span>`).join('')}</div>` : ''}
-    </div>
-    <div class="tip-box">
-      <div class="tip-icon">✨</div>
-      <div class="tip-text">Try the <strong>AI tab</strong> to get personalised food, exercise, and health advice based on how you feel today!</div>
-    </div>`;
-}
-
-/* ── History ── */
-function renderHistory() {
-  const periods = [...(localData.periods||[])].sort((a,b) => a.start_date > b.start_date ? -1 : 1);
-  if (!periods.length) {
-    document.getElementById('history-content').innerHTML = `
-      <div class="empty-state"><div class="e-icon">🗓️</div>
-      <div class="e-title">No periods logged yet</div>
-      <div class="e-sub">Go to Log to add your first period!</div></div>`;
-    return;
-  }
-  const sorted = [...periods].sort((a,b) => a.start_date < b.start_date ? -1 : 1);
-  const lens   = [];
-  for (let i = 1; i < sorted.length; i++) {
-    lens.push(Math.floor((new Date(sorted[i].start_date) - new Date(sorted[i-1].start_date)) / 864e5));
-  }
-  document.getElementById('history-content').innerHTML = `
-    ${lens.length ? `<div class="stats-row" style="margin-bottom:16px;">
-      <div class="stat-pill"><div class="s-num">${Math.min(...lens)}</div><div class="s-label">Shortest Cycle</div></div>
-      <div class="stat-pill"><div class="s-num">${Math.max(...lens)}</div><div class="s-label">Longest Cycle</div></div>
-    </div>` : ''}
-    <div class="card">
-      <div class="card-title">🗓️ All Periods (${periods.length})</div>
-      ${periods.map(p => {
-        const s   = new Date(p.start_date);
-        const e   = p.end_date ? new Date(p.end_date) : null;
-        const dur = e ? Math.floor((e-s)/864e5)+1 : '?';
-        const ci  = sorted.findIndex(x => x.start_date === p.start_date);
-        const cl  = ci > 0 ? lens[ci-1] : null;
-        return `<div class="history-item">
-          <div><div class="h-date">${s.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
-          <div class="h-days">${dur} day period${cl ? ` · ${cl} day cycle` : ''}</div></div>
-          <div class="h-len">${dur} days</div>
-        </div>`;
-      }).join('')}
-    </div>
-    <button class="btn btn-secondary" onclick="confirmClear()" style="margin-top:8px;">🗑️ Clear All Data</button>`;
-}
-
-/* ── Logging ── */
-function savePeriod() {
-  const start = document.getElementById('start-date').value;
-  const end   = document.getElementById('end-date').value;
-  if (!start) { showToast('Please enter the first day 📅'); return; }
-  const ex = localData.periods.find(p => p.start_date === start);
-  if (ex) { ex.end_date = end || ex.end_date; }
-  else { localData.periods.push({start_date:start, end_date:end||null, id:Date.now()}); }
-  saveLocal();
-  document.getElementById('start-date').value = '';
-  document.getElementById('end-date').value   = '';
-  showToast('Period saved! 🌸');
-  // also POST to backend if available
-  fetch(`${API_BASE}/api/period`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({start_date:start, end_date:end||null})
-  }).catch(() => {});
-}
-
-function saveDailyLog() {
-  const today  = new Date().toISOString().split('T')[0];
-  const mood   = document.querySelector('.mood-btn.selected')?.dataset.mood || null;
-  const pain   = parseInt(document.getElementById('pain-slider').value);
-  const flow   = document.querySelector('#flow-chips .chip.selected')?.dataset.val || null;
-  const sleep  = document.querySelector('#sleep-chips .chip.selected')?.dataset.val || null;
-  const energy = document.querySelector('#energy-chips .chip.selected')?.dataset.val || null;
-  const crampV = document.querySelector('#cramp-chips .chip.selected')?.dataset.val;
-  const log    = {date:today, mood, pain_level:pain, flow_level:flow, sleep_quality:sleep, energy_level:energy, cramps:crampV==='yes'?true:crampV==='no'?false:null};
-  const ex     = localData.daily_logs.find(l => l.date === today);
-  if (ex) Object.assign(ex, log); else localData.daily_logs.push(log);
-  saveLocal();
-  document.querySelectorAll('.mood-btn, .chip').forEach(el => el.classList.remove('selected'));
-  document.getElementById('pain-slider').value = 5; updateSlider(document.getElementById('pain-slider'));
-  showToast('Check-in saved! ✨');
-}
-
-/* ── AI Page ── */
-let selectedAIMood = null;
-
-function prefillAIForm() {
-  // Auto-select phase
-  const phase = getPhase();
-  if (phase !== 'unknown') {
-    document.getElementById('ai-phase').value = phase;
-  }
-  // Pre-fill today's log if exists
-  const today = new Date().toISOString().split('T')[0];
-  const log   = localData.daily_logs.find(l => l.date === today);
-  if (log) {
-    if (log.mood) {
-      document.querySelectorAll('#ai-mood-grid .mood-btn').forEach(b => {
-        if (b.dataset.mood === log.mood) { b.classList.add('selected'); selectedAIMood = log.mood; }
-      });
-    }
-    if (log.pain_level) {
-      document.getElementById('ai-pain-slider').value = log.pain_level;
-      updateAISlider(document.getElementById('ai-pain-slider'));
-    }
-    if (log.energy_level) {
-      document.querySelectorAll('#ai-energy-chips .chip').forEach(c => {
-        if (c.dataset.val === log.energy_level) c.classList.add('selected');
-      });
-    }
-    if (log.sleep_quality) {
-      document.querySelectorAll('#ai-sleep-chips .chip').forEach(c => {
-        if (c.dataset.val === log.sleep_quality) c.classList.add('selected');
-      });
-    }
-  }
-}
-
-function selectAIMood(btn) {
-  document.querySelectorAll('#ai-mood-grid .mood-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  selectedAIMood = btn.dataset.mood;
-}
-
-async function getAISuggestions() {
-  const phase  = document.getElementById('ai-phase').value;
-  const mood   = selectedAIMood;
-  const pain   = parseInt(document.getElementById('ai-pain-slider').value);
-  const energy = document.querySelector('#ai-energy-chips .chip.selected')?.dataset.val;
-  const sleep  = document.querySelector('#ai-sleep-chips .chip.selected')?.dataset.val;
-
-  if (!mood)   { showToast('Please select your mood 😊'); return; }
-  if (!energy) { showToast('Please select energy level 🔋'); return; }
-  if (!sleep)  { showToast('Please select sleep quality 😴'); return; }
-
-  const btn = document.getElementById('ai-submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Generating AI Suggestions...';
-
-  document.getElementById('ai-result').innerHTML = `
-    <style>
-      .spinner-circle { width: 40px; height: 40px; border: 4px solid var(--blush); border-top: 4px solid var(--rose); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-    <div class="ai-loading">
-      <div class="spinner-circle"></div>
-      <p>Generating AI Suggestions...</p>
-    </div>`;
-
-  try {
-    const res = await fetch(`/.netlify/functions/ai`, {
-      method:  'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        period_phase:  phase,
-        mood,
-        pain_level:    pain,
-        energy_level:  energy,
-        sleep_quality: sleep,
-      })
-    });
-
-    const text = await res.text();
-    
-    if (!text || text.trim() === "") {
-      document.getElementById('ai-result').innerHTML = `
-        <div class="error-box">
-          <div class="err-icon">⚠️</div>
-          <p><strong>Debug Error: Empty Response</strong></p>
-          <p style="font-size:12px; color:var(--text-color); margin-top:5px; opacity:0.8;">
-            Status: ${res.status} ${res.statusText}<br>
-            URL: ${res.url}<br>
-            Please copy this debug info.
-          </p>
-        </div>`;
-      return;
-    }
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      console.error("JSON Parse Error. Raw response:", text);
-      throw new Error("Invalid JSON format received from server.");
-    }
-
-    if (!res.ok) {
-      throw new Error(json.error || json.detail || 'Server error');
-    }
-
-    renderAIResult(json.data);
-
-  } catch (err) {
-    console.error("AI Fetch Error:", err);
-    // Show fallback suggestions if the API crashes or doesn't work (like on Netlify without backend)
-    renderAIResult({
-      phase: phase,
-      mood_analysis: "DEBUG INFO (" + err.message + ") -> We couldn't connect to our custom AI right now, but here are some reliable suggestions tailored to you:",
-      food_suggestions: [
-        "Iron rich foods",
-        "Fruits",
-        "Hydration"
-      ],
-      exercise_suggestions: [
-        "Light walking",
-        "Yoga",
-        "Stretching"
-      ],
-      health_tips: [
-        "Listen to your body and rest when needed.",
-        "Take deep breaths and practice mindfulness.",
-        "Keep yourself warm and cozy.",
-        "Prioritize a good night's sleep tonight."
-      ]
-    });
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✨ Get AI Suggestions';
-  }
-}
-
-function renderAIResult(data) {
-  const phaseLabels = {
-    menstrual:'During Period 🩸', follicular:'After Period 🌱',
-    ovulation:'Ovulation ✨',     luteal:'Before Period 🌙'
-  };
-
-  const makeItems = (arr, color) => arr.map((item, i) =>
-    `<div class="ai-item">
-       <div class="ai-bullet" style="background:${color}20;color:${color};">${i+1}</div>
-       <div class="ai-item-text">${item}</div>
-     </div>`
-  ).join('');
-
-  document.getElementById('ai-result').innerHTML = `
-    <div class="card">
-      <div class="card-title">🌸 Phase: ${phaseLabels[data.phase] || data.phase}</div>
-
-      <div class="ai-result-section">
-        <div class="ars-title">💗 Mood Analysis</div>
-        <div class="mood-analysis-box"><p>${data.mood_analysis}</p></div>
-      </div>
-
-      <div class="ai-result-section">
-        <div class="ars-title">🥗 Food Suggestions</div>
-        ${makeItems(data.food_suggestions, '#E8667A')}
-      </div>
-
-      <div class="ai-result-section">
-        <div class="ars-title">🏃 Exercise Suggestions</div>
-        ${makeItems(data.exercise_suggestions, '#27ae60')}
-      </div>
-
-      <div class="ai-result-section">
-        <div class="ars-title">💡 Health Tips</div>
-        ${makeItems(data.health_tips, '#8e44ad')}
-      </div>
-
-      <div class="tip-box" style="margin-top:4px;">
-        <div class="tip-icon">🤖</div>
-        <div class="tip-text">Generated by ${data.model_used || 'OpenAI'}. These are general wellness suggestions — always consult a doctor for medical advice.</div>
-      </div>
-    </div>`;
-}
-
-/* ── API Status Check ── */
-async function checkAPIStatus() {
-  const el   = document.getElementById('api-status');
-  const text = document.getElementById('api-status-text');
-  text.textContent = 'checking…';
-  el.className = 'api-status';
-  try {
-    const res  = await fetch(`${API_BASE}/api/health-check`, {signal: AbortSignal.timeout(3000)});
-    const json = await res.json();
-    if (json.openai_configured) {
-      el.className = 'api-status ok';
-      text.textContent = 'AI Ready ✅';
-    } else {
-      el.className = 'api-status err';
-      text.textContent = 'No API Key ⚠️';
-    }
-  } catch {
-    el.className = 'api-status err';
-    text.textContent = 'Server offline';
-  }
-}
-
-/* ── UI Helpers ── */
-function selectMood(btn) {
-  document.querySelectorAll('#page-track .mood-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-}
-function selectChip(chip, groupId) {
-  document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.remove('selected'));
-  chip.classList.add('selected');
-}
-function updateSlider(el) {
-  const v = el.value;
-  el.style.setProperty('--val', (v/10*100)+'%');
-  document.getElementById('pain-val-label').textContent = v;
-  document.getElementById('pain-display').textContent   = v;
-}
-function updateAISlider(el) {
-  const v = el.value;
-  el.style.setProperty('--val', (v/10*100)+'%');
-  document.getElementById('ai-pain-label').textContent   = v;
-  document.getElementById('ai-pain-display').textContent = v;
-}
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-function confirmClear() {
-  if (confirm('Clear ALL data? This cannot be undone.')) {
-    localData = {periods:[], daily_logs:[]};
-    saveLocal(); renderHistory(); showToast('Cleared');
-  }
-}
-
-/* ── Init ── */
-document.getElementById('start-date').valueAsDate = new Date();
-updateSlider(document.getElementById('pain-slider'));
-updateAISlider(document.getElementById('ai-pain-slider'));
-renderHome();
-checkAPIStatus();
-setInterval(checkAPIStatus, 30000);   // refresh status every 30s
-</script>
-
-<!-- Three.js 3D Background -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+(function(){
   const canvas = document.getElementById('webgl-canvas');
+  if (!canvas || typeof THREE === 'undefined') return;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#FFF8F5');
-  scene.fog = new THREE.FogExp2('#FFF8F5', 0.025);
+  scene.fog = new THREE.FogExp2('#FFF8F5', 0.022);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.z = 25;
@@ -813,104 +206,82 @@ setInterval(checkAPIStatus, 30000);   // refresh status every 30s
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  // Lights
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
-  scene.add(ambientLight);
-
-  const dirLight = new THREE.DirectionalLight(0xfff0f5, 0.7);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  const dirLight = new THREE.DirectionalLight(0xfff0f5, 0.65);
   dirLight.position.set(5, 10, 7);
   scene.add(dirLight);
-
-  const pointLight1 = new THREE.PointLight('#E8667A', 1.5, 50);
+  const pointLight1 = new THREE.PointLight('#E8667A', 1.4, 50);
   pointLight1.position.set(-8, 5, 5);
   scene.add(pointLight1);
-
-  const pointLight2 = new THREE.PointLight('#C5DFF9', 1.5, 50);
+  const pointLight2 = new THREE.PointLight('#C5DFF9', 1.4, 50);
   pointLight2.position.set(8, -5, 5);
   scene.add(pointLight2);
 
-  // Objects
   const spheres = [];
   const colors = ['#E8667A', '#F2A3B0', '#FDE8EC', '#D4C5F9', '#C5EFE0'];
-  const geometry = new THREE.IcosahedronGeometry(1, 16); 
-  
-  for(let i=0; i<35; i++) {
+  const geometry = new THREE.IcosahedronGeometry(1.15, 12);
+  for (let i = 0; i < 28; i++) {
     const material = new THREE.MeshStandardMaterial({
       color: colors[Math.floor(Math.random() * colors.length)],
-      roughness: 0.1,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.9,
+      roughness: 0.12, metalness: 0.08, transparent: true, opacity: 0.88,
     });
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(
-      (Math.random() - 0.5) * 40,
-      (Math.random() - 0.5) * 50,
-      (Math.random() - 0.5) * 20 - 5
-    );
-    const scale = Math.random() * 2 + 0.8;
+    mesh.position.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 20 - 5);
+    const scale = Math.random() * 2 + 0.75;
     mesh.scale.set(scale, scale, scale);
     scene.add(mesh);
-    
     spheres.push({
       mesh,
-      speedY: (Math.random() * 0.015) + 0.005, // floating up
-      rotX: (Math.random() - 0.5) * 0.02,
-      rotY: (Math.random() - 0.5) * 0.02
+      speedY: (Math.random() * 0.014) + 0.004,
+      rotX: (Math.random() - 0.5) * 0.018,
+      rotY: (Math.random() - 0.5) * 0.018
     });
   }
 
-  // Animation Loop
-  let mouseX = 0;
-  let mouseY = 0;
-  
-  const windowHalfX = window.innerWidth / 2;
-  const windowHalfY = window.innerHeight / 2;
-
-  document.addEventListener('mousemove', (event) => {
-    mouseX = (event.clientX - windowHalfX) * 0.03;
-    mouseY = (event.clientY - windowHalfY) * 0.03;
-  }, {passive:true});
-
-  document.addEventListener('touchmove', (event) => {
-    mouseX = (event.touches[0].clientX - windowHalfX) * 0.03;
-    mouseY = (event.touches[0].clientY - windowHalfY) * 0.03;
-  }, {passive:true});
+  let mouseX = 0, mouseY = 0;
+  const hx = window.innerWidth / 2, hy = window.innerHeight / 2;
+  document.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX - hx) * 0.028;
+    mouseY = (e.clientY - hy) * 0.028;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!e.touches[0]) return;
+    mouseX = (e.touches[0].clientX - hx) * 0.028;
+    mouseY = (e.touches[0].clientY - hy) * 0.028;
+  }, { passive: true });
 
   const clock = new THREE.Clock();
-
   function animate() {
     requestAnimationFrame(animate);
     const elapsedTime = clock.getElapsedTime();
-
-    camera.position.x += (mouseX - camera.position.x) * 0.05;
-    camera.position.y += (-mouseY - camera.position.y) * 0.05;
+    camera.position.x += (mouseX - camera.position.x) * 0.045;
+    camera.position.y += (-mouseY - camera.position.y) * 0.045;
     camera.lookAt(scene.position);
-
     spheres.forEach((s, idx) => {
       s.mesh.rotation.x += s.rotX;
       s.mesh.rotation.y += s.rotY;
-      
-      // gentle hover effect combined with continuous floating up
       s.mesh.position.y += s.speedY;
-      s.mesh.position.x += Math.sin(elapsedTime * 0.5 + idx) * 0.005;
-      
-      if(s.mesh.position.y > 25) {
+      s.mesh.position.x += Math.sin(elapsedTime * 0.48 + idx) * 0.004;
+      if (s.mesh.position.y > 25) {
         s.mesh.position.y = -25;
         s.mesh.position.x = (Math.random() - 0.5) * 40;
       }
     });
-
     renderer.render(scene, camera);
   }
-  
   animate();
-
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
+})();
 </script>
+
+<script src="i18n.js"></script>
+<script src="prediction.js"></script>
+<script src="analytics.js"></script>
+<script src="ai-chat.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
