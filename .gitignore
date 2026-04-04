@@ -1,0 +1,9 @@
+# Python & Environments
+venv/
+env/
+.env
+__pycache__/
+*.pyc
+
+# Mac specific
+.DS_Store
