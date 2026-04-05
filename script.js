@@ -925,28 +925,33 @@ function wireEvents() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  // Initialize Firebase Auth state (CDN v9)
-  const { onAuthChange, isAuthenticated } = window.FlowAuth || {};
-  
-  onAuthChange((user) => {
-    if (user) {
-      document.body.classList.add('authenticated');
-      document.querySelectorAll('.app-protected').forEach(el => el.classList.add('authenticated'));
-      document.querySelectorAll('.login-overlay').forEach(el => el.classList.add('hidden'));
-      document.getElementById('logout-btn')?.classList.remove('visually-hidden');
-      showToast(`Welcome ${user.email || user.displayName}`);
-      // Initialize app after auth
-      initApp();
-    } else {
-      document.body.classList.remove('authenticated');
-      document.querySelectorAll('.app-protected').forEach(el => el.classList.remove('authenticated'));
-      document.querySelectorAll('.login-overlay').forEach(el => el.classList.remove('hidden'));
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  const sel = document.getElementById("lang-select");
+  if (sel) sel.value = FlowI18n.getLang();
+  FlowI18n.setLang(FlowI18n.getLang());
+  applyTranslations();
+
+  const sd = document.getElementById("start-date");
+  if (sd) {
+    try {
+      sd.valueAsDate = new Date();
+    } catch (_) {}
+  }
+
+  updateSlider(document.getElementById("pain-slider"));
+  updateEnergySlider(document.getElementById("energy-slider"));
+  updateAISlider(document.getElementById("ai-pain-slider"));
+  updateAIEnergySlider(document.getElementById("ai-energy-slider"));
+
+  wireEvents();
+  initChatShell();
+
+  setInterval(runSmartNotifications, 60 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") runSmartNotifications();
   });
 
-  // Wire login form
-  wireAuthEvents();
+  renderDashboard();
 });
 
 async function initApp() {
