@@ -13,13 +13,14 @@
 <body>
 <canvas id="webgl-canvas" aria-hidden="true"></canvas>
 
-<header class="top-bar">
+<header class="top-bar app-protected">
   <div class="top-bar-inner">
     <div class="logo">
       <span class="logo-mark" data-i18n="appTitle">Flow AI</span>
       <span class="logo-sub" data-i18n="appTagline">Women's Health Platform</span>
     </div>
     <div class="top-actions">
+      <button id="logout-btn" class="btn-text logout-btn" aria-label="Logout" title="Logout">🚪</button>
       <label class="visually-hidden" for="lang-select">Language</label>
       <select id="lang-select" class="lang-select" aria-label="Language">
         <option value="en" data-i18n="lang_en">English</option>
@@ -179,7 +180,7 @@
   <div id="history-content"></div>
 </section>
 
-<nav class="bottom-nav" aria-label="Primary">
+<nav class="bottom-nav app-protected" aria-label="Primary">
   <button type="button" class="nav-btn active" data-page="dashboard"><span class="icon" aria-hidden="true">🏠</span><span data-i18n="nav_home">Home</span></button>
   <button type="button" class="nav-btn" data-page="predictions"><span class="icon" aria-hidden="true">🔮</span><span data-i18n="nav_predictions">Predict</span></button>
   <button type="button" class="nav-btn" data-page="log"><span class="icon" aria-hidden="true">📝</span><span data-i18n="nav_log">Log</span></button>
@@ -191,6 +192,45 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- Firebase Login Overlay -->
+<div id="login-overlay" class="login-overlay">
+  <div class="login-container glass-card">
+    <div class="login-header">
+      <h1 class="logo-mark">Flow AI</h1>
+      <p>Welcome back</p>
+    </div>
+    
+    <div class="auth-mode-toggle">
+      <button id="login-btn" class="auth-toggle active">Login</button>
+      <button id="register-btn" class="auth-toggle">Sign up</button>
+    </div>
+    
+    <form id="auth-form" class="auth-form">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="auth-email" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="auth-password" class="form-input" minlength="6" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="auth-submit">Sign in</button>
+    </form>
+    
+    <div class="divider">or</div>
+    
+    <button id="google-login" class="btn btn-secondary google-btn">
+      Continue with Google
+    </button>
+    
+    <div id="auth-error" class="auth-error"></div>
+    <div id="auth-loading" class="auth-loading visually-hidden">
+      <div class="spinner-circle"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const canvas = document.getElementById('webgl-canvas');
@@ -278,6 +318,9 @@
 })();
 </script>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="firebase-auth.js"></script>
 <script src="i18n.js"></script>
 <script src="prediction.js"></script>
 <script src="analytics.js"></script>

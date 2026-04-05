@@ -925,7 +925,31 @@ function wireEvents() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Initialize Firebase Auth state (CDN v9)
+  const { onAuthChange, isAuthenticated } = window.FlowAuth || {};
+  
+  onAuthChange((user) => {
+    if (user) {
+      document.body.classList.add('authenticated');
+      document.querySelectorAll('.app-protected').forEach(el => el.classList.add('authenticated'));
+      document.querySelectorAll('.login-overlay').forEach(el => el.classList.add('hidden'));
+      document.getElementById('logout-btn')?.classList.remove('visually-hidden');
+      showToast(`Welcome ${user.email || user.displayName}`);
+      // Initialize app after auth
+      initApp();
+    } else {
+      document.body.classList.remove('authenticated');
+      document.querySelectorAll('.app-protected').forEach(el => el.classList.remove('authenticated'));
+      document.querySelectorAll('.login-overlay').forEach(el => el.classList.remove('hidden'));
+    }
+  });
+
+  // Wire login form
+  wireAuthEvents();
+});
+
+async function initApp() {
   const sel = document.getElementById("lang-select");
   if (sel) sel.value = FlowI18n.getLang();
   FlowI18n.setLang(FlowI18n.getLang());
@@ -952,4 +976,74 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   renderDashboard();
-});
+}
+
+function wireAuthEvents() {
+  const { login, register, googleLogin, logout } = window.FlowAuth;
+  
+  // Toggle login/register
+  document.getElementById('login-btn')?.addEventListener('click', () => {
+    document.getElementById('auth-form').dataset.mode = 'login';
+    document.getElementById('auth-submit').textContent = 'Sign in';
+    document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('login-btn').classList.add('active');
+  });
+
+  document.getElementById('register-btn')?.addEventListener('click', () => {
+    document.getElementById('auth-form').dataset.mode = 'register';
+    document.getElementById('auth-submit').textContent = 'Create account';
+    document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('register-btn').classList.add('active');
+  });
+
+  // Form submit
+  document.getElementById('auth-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const mode = document.getElementById('auth-form').dataset.mode || 'login';
+    const submitBtn = document.getElementById('auth-submit');
+    const loadingEl = document.getElementById('auth-loading');
+    const errorEl = document.getElementById('auth-error');
+
+    try {
+      loadingEl.classList.remove('visually-hidden');
+      errorEl.textContent = '';
+
+      let result;
+      if (mode === 'login') {
+        result = await login(email, password);
+      } else {
+        result = await register(email, password);
+      }
+      
+      showToast(mode === 'login' ? 'Welcome back!' : 'Account created!');
+    } catch (error) {
+      errorEl.textContent = error.message.includes('auth/user-not-found') ? 'No account found' :
+                           error.message.includes('auth/wrong-password') ? 'Wrong password' :
+                           error.message.includes('auth/email-already') ? 'Email already in use' :
+                           error.message || 'Authentication failed';
+    } finally {
+      loadingEl.classList.add('visually-hidden');
+    }
+  });
+
+  // Google login
+  document.getElementById('google-login')?.addEventListener('click', async () => {
+    try {
+      await googleLogin();
+    } catch (error) {
+      document.getElementById('auth-error').textContent = 'Google login failed';
+    }
+  });
+
+  // Logout
+  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    try {
+      await logout();
+      showToast('Logged out');
+    } catch (error) {
+      showToast('Logout failed');
+    }
+  });
+}
